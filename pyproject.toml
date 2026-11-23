@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tvchart"
+version = "0.1.0"
+description = "TradingView-style technical charts and indicator analytics in Python"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "LoloMojo" }]
+keywords = ["trading", "technical-analysis", "tradingview", "plotly", "yfinance", "stocks"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Topic :: Office/Business :: Financial :: Investment",
+]
+dependencies = [
+  "pandas>=2.0",
+  "numpy>=1.24",
+  "yfinance>=0.2.40",
+  "plotly>=5.18",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.4"]
+export = ["kaleido>=0.2.1"]
+
+[project.scripts]
+tvchart = "tvchart.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/LoloMojo/Python-stock-charting"
+Source = "https://github.com/LoloMojo/Python-stock-charting"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
