@@ -108,3 +108,13 @@ def test_history_skips_malformed_lines(tmp_path: Path):
     rows = scan_mod.load_history(p)
     assert len(rows) == 1
     assert rows[0]["ticker"] == "AAPL"
+
+
+def test_deltas_do_not_cross_configs(fake_load, tmp_path: Path):
+    """A --mtf run must not diff against a plain run; the score components differ."""
+    hist = tmp_path / "h.jsonl"
+    scan_mod.scan_watchlist(["UPX"], interval="1d", history_path=hist, delay=0)
+    plain = scan_mod.scan_watchlist(["UPX"], interval="1d", history_path=hist, delay=0)[0]
+    assert plain["prev_run_utc"] is not None  # same config -> delta attached
+    mtf = scan_mod.scan_watchlist(["UPX"], interval="1d", mtf=True, history_path=hist, delay=0)[0]
+    assert "prev_run_utc" not in mtf or mtf["prev_run_utc"] is None

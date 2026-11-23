@@ -36,7 +36,7 @@ W_SQUEEZE = 0.5
 W_EXTENSION = 0.5
 
 FIELDS = [
-    "run_id", "run_utc", "ticker", "interval", "last_bar", "last_close",
+    "run_id", "run_utc", "ticker", "interval", "config", "last_bar", "last_close",
     "change_pct", "trend_score", "trend_label", "rsi", "adx", "atr_pct",
     "bb_bandwidth", "bb_percentile", "squeeze_state", "rel_volume",
     "support", "resistance", "dist_support_pct", "dist_resistance_pct",
@@ -202,9 +202,10 @@ def load_history(path: Path) -> list[dict]:
     return rows
 
 
-def _previous(history: list[dict], ticker: str, interval: str) -> dict | None:
+def _previous(history: list[dict], ticker: str, interval: str, config: str) -> dict | None:
     for row in reversed(history):
-        if row.get("ticker") == ticker and row.get("interval") == interval and not row.get("error"):
+        if (row.get("ticker") == ticker and row.get("interval") == interval
+                and row.get("config") == config and not row.get("error")):
             return row
     return None
 
@@ -254,7 +255,13 @@ def scan_watchlist(
         ticker = ticker.strip().upper()
         if not ticker:
             continue
-        row: dict = {"run_id": run_id, "run_utc": run_utc, "ticker": ticker, "interval": interval}
+        row: dict = {
+            "run_id": run_id, "run_utc": run_utc, "ticker": ticker, "interval": interval,
+            # Deltas are only meaningful between runs with the same settings, so the
+            # config is part of the key. A --mtf run must not be diffed against a
+            # plain run: the score components differ.
+            "config": f"{interval}|mtf={bool(mtf)}|plan={plan or '-'}",
+        }
         try:
             df, _meta = _data.load(ticker, interval=interval, period=period)
             df = _ind.enrich(df)
@@ -262,7 +269,7 @@ def scan_watchlist(
             if mtf:
                 mtf_block = _scan_mtf(ticker)
             row.update(_row_from_frame(df, ticker, interval, mtf_block, plan))
-            _attach_deltas(row, _previous(history, ticker, interval))
+            _attach_deltas(row, _previous(history, ticker, interval, row["config"]))
         except Exception as exc:  # a single bad ticker must not kill the batch
             row["error"] = f"{type(exc).__name__}: {exc}"
         rows.append(row)
