@@ -10,3 +10,7 @@ examples/out/
 *.html
 !docs/**/*.html
 cache/
+
+# scan history is user data, not source
+scan_history.jsonl
+scans/
