@@ -30,6 +30,7 @@ export = ["kaleido>=0.2.1"]
 
 [project.scripts]
 tvchart = "tvchart.cli:main"
+tvchart-scan = "tvchart.cli:scan_main"
 
 [project.urls]
 Homepage = "https://github.com/LoloMojo/Python-stock-charting"

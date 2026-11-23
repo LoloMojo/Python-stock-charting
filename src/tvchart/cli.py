@@ -137,5 +137,79 @@ def main(argv: list[str] | None = None) -> int:
     return 0
 
 
+def scan_main(argv: list[str] | None = None) -> int:
+    """``tvchart-scan`` — batch a watchlist into an append-only history."""
+    from . import scan as _scan
+
+    p = argparse.ArgumentParser(
+        prog="tvchart-scan",
+        description="Scan a watchlist, append results to a JSONL history, print a ranked table.",
+    )
+    p.add_argument("watchlist", help="Path to a watchlist file, or a comma-separated ticker list")
+    p.add_argument("-i", "--interval", default="1d", help="1m 5m 15m 30m 1h 1d 1wk 1mo (default 1d)")
+    p.add_argument("-p", "--period", default=None, help="Lookback: 1mo 3mo 6mo 1y 2y 5y max")
+    p.add_argument("--mtf", action="store_true", help="Also score weekly/daily/1h/15m alignment")
+    p.add_argument("--plan", default=None, choices=["long", "short"], help="Attach an ATR trade plan")
+    p.add_argument("--history", default="scan_history.jsonl", help="Append-only JSONL history path")
+    p.add_argument("--csv", default=None, help="Write the current run as a CSV snapshot")
+    p.add_argument("--delay", type=float, default=0.4, help="Seconds between tickers (default 0.4)")
+    p.add_argument("--top", type=int, default=None, help="Only keep the N highest-scoring rows")
+    p.add_argument("--json", dest="json_out", default=None, metavar="PATH",
+                   help="Write this run's rows as JSON; '-' for stdout")
+    p.add_argument("--quiet", action="store_true", help="Suppress the table")
+    args = p.parse_args(argv)
+
+    tickers = _scan.parse_watchlist(args.watchlist)
+    if not tickers:
+        print("error: empty watchlist", file=sys.stderr)
+        return 2
+
+    rows = _scan.scan_watchlist(
+        tickers,
+        interval=args.interval,
+        period=args.period,
+        mtf=args.mtf,
+        plan=args.plan,
+        history_path=args.history,
+        csv_path=args.csv,
+        delay=args.delay,
+        top=args.top,
+    )
+
+    human = sys.stdout if args.json_out != "-" else sys.stderr
+    if not args.quiet:
+        ok = [r for r in rows if not r.get("error")]
+        bad = [r for r in rows if r.get("error")]
+        print(f"\n  {len(ok)} scanned  ·  {len(bad)} failed  ·  interval {args.interval}", file=human)
+        print(
+            f"  {'ticker':<7}{'score':>7}{'trend':>7}{'rsi':>6}{'adx':>6}{'atr%':>7}"
+            f"{'bw%':>7}{'mtf':>7}  tags",
+            file=human,
+        )
+        for r in ok:
+            print(
+                f"  {r['ticker']:<7}{r.get('setup_score', 0):>7.2f}"
+                f"{r.get('trend_score') or 0:>7}{r.get('rsi') or 0:>6.1f}"
+                f"{r.get('adx') or 0:>6.1f}{r.get('atr_pct') or 0:>7.2f}"
+                f"{r.get('bb_bandwidth') or 0:>7.2f}{r.get('mtf_score') or 0:>7.2f}"
+                f"  {r.get('tags', '')}",
+                file=human,
+            )
+        for r in bad:
+            print(f"  {r['ticker']:<7} FAILED  {r['error']}", file=human)
+        print(f"\n  history -> {Path(args.history).resolve()}", file=human)
+        if args.csv:
+            print(f"  csv     -> {Path(args.csv).resolve()}", file=human)
+
+    if args.json_out:
+        blob = json.dumps(rows, indent=2, default=str)
+        if args.json_out == "-":
+            sys.stdout.write(blob + "\n")
+        else:
+            Path(args.json_out).write_text(blob)
+            print(f"  json    -> {Path(args.json_out).resolve()}", file=human)
+    return 0
+
+
 if __name__ == "__main__":
     raise SystemExit(main())

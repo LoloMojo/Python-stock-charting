@@ -24,6 +24,7 @@ from .indicators import (
 )
 from .signals import mtf_alignment, summary, trade_plan, trend_state
 from .chart import build_chart, save_html
+from .scan import scan_watchlist, setup_score, parse_watchlist, load_history
 
 __version__ = "0.1.0"
 
@@ -32,4 +33,5 @@ __all__ = [
     "enrich", "ema", "sma", "rsi", "macd", "bollinger", "atr", "vwap", "stochastic", "adx",
     "trend_state", "summary", "trade_plan", "mtf_alignment",
     "build_chart", "save_html",
+    "scan_watchlist", "setup_score", "parse_watchlist", "load_history",
 ]

@@ -105,6 +105,38 @@ out = subprocess.run(["tvchart", "AAPL", "--json", "-", "-o", "a.html"],
 summary = json.loads(out.stdout)          # stderr holds the pretty report
 ```
 
+### Batch scanning and history
+
+`tvchart-scan` runs a watchlist through the same pipeline and appends every run to an
+append-only JSONL history, so you can rank setups *and* track how they change over time.
+
+```bash
+tvchart-scan examples/watchlist.txt -i 1d -p 1y --mtf --plan long \
+    --history scan_history.jsonl --csv scan_latest.csv
+```
+
+```
+  12 scanned  ·  0 failed  ·  interval 1d
+  ticker   score  trend   rsi   adx   atr%    bw%    mtf  tags
+  AAPL      2.45      3  52.1  15.7   2.39   6.88   0.38  mtf-aligned-up,trend-up
+  ...
+```
+
+Each row carries the trend score, RSI/ADX/ATR, Bollinger width and percentile, the ATR
+trade plan, the MTF alignment, and `setup_score` — a documented composite (trend 2.0,
+MTF 1.5, RSI 1.0, ADX 0.5, squeeze 0.5, extension penalty 0.5). On the second run the
+same ticker gets `prev_run_utc`, `days_since_prev`, `trend_delta`, `rsi_delta` and
+`close_delta_pct`, so the file becomes a time series rather than a snapshot.
+
+The history is append-only by design: failures are recorded as rows with an `error`
+field instead of aborting the batch, and nothing is ever rewritten.
+
+```python
+from tvchart import scan_watchlist
+rows = scan_watchlist(["AAPL", "NVDA"], interval="1d", history_path="scan_history.jsonl")
+print(rows[0]["setup_score"], rows[0]["tags"])
+```
+
 ## Python API
 
 ```python
